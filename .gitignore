@@ -1,0 +1,6 @@
+# Windows/WSL download metadata
+*:Zone.Identifier
+
+# OS junk
+.DS_Store
+Thumbs.db

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snittet.dk – beregn dit vægtede karaktergennemsnit</title>
+<meta name="description" content="Beregn dit vægtede karaktergennemsnit ud fra karakterer og ECTS-point. Gratis værktøj til danske universitetsstuderende.">
+<meta property="og:title" content="Snittet.dk – beregn dit vægtede karaktergennemsnit">
+<meta property="og:description" content="Beregn dit vægtede karaktergennemsnit ud fra karakterer og ECTS-point.">
+<meta property="og:type" content="website">
+<link rel="icon" href="assets/snittet-logo.png">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { background: #f2f5f4; font-family: Lato, "Helvetica Neue", Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }
+  * { box-sizing: border-box; }
+  a { color: #17876f; text-decoration: none; border-bottom: 1px solid rgba(23,135,111,0.35); }
+  a:hover { color: #0f6555; border-bottom-color: #0f6555; }
+  input, select, button { font-family: inherit; }
+  input:focus-visible, select:focus-visible { outline: 2px solid #2bb59a; outline-offset: 1px; }
+  ::placeholder { color: #9aa8a4; }
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #f2f5f4; color: #1f2933;">
+  <header style="background: #2b3440; padding: 0 32px; height: 84px; display: flex; align-items: center; justify-content: space-between; gap: 24px;">
+    <img src="assets/snittet-logo.png" alt="Snittet.dk" style="height: 34px; width: auto; display: block;" />
+    <div style="display: flex; align-items: center; gap: 22px;">
+      <span style="font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.55); font-weight: 700;">{{ t.tagline }}</span>
+      <div style="display: flex; gap: 2px; padding: 3px; background: rgba(255,255,255,0.1); border-radius: 9px;">
+        <button type="button" onClick="{{ setDa }}" style="{{ daStyle }}">DA</button>
+        <button type="button" onClick="{{ setEn }}" style="{{ enStyle }}">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <main style="max-width: 1200px; margin: 0 auto; padding: 44px 32px 72px; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 32px; align-items: start;">
+
+    <section style="background: #ffffff; border-radius: 18px; box-shadow: 0 1px 2px rgba(31,41,51,0.06), 0 18px 44px -28px rgba(31,41,51,0.35); overflow: hidden;">
+      <div style="padding: 34px 34px 8px;">
+        <h1 style="margin: 0 0 10px; font-size: 32px; line-height: 1.15; font-weight: 900; letter-spacing: -0.02em; color: #1f2933;">{{ t.title }}</h1>
+        <p style="margin: 0; font-size: 16px; line-height: 1.55; color: #5c6b68; max-width: 46ch; text-wrap: pretty;">{{ t.lede }}</p>
+      </div>
+
+      <div style="padding: 26px 34px 0; display: grid; grid-template-columns: 1fr 104px 116px 36px 36px; gap: 10px 12px; align-items: center;">
+        <span style="align-self: end; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8d9b97;">{{ t.colSubject }}</span>
+        <span style="align-self: end; display: flex; flex-direction: column; gap: 3px; align-items: flex-start;">
+          <button type="button" onClick="{{ toggleGradeMode }}" style="border: 0; background: transparent; padding: 0; font-size: 11.5px; font-weight: 700; color: #17876f; cursor: pointer; border-bottom: 1px solid rgba(23,135,111,0.35); white-space: nowrap;" style-hover="color: #0f6555">{{ t.gradeToggle }}</button>
+          <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8d9b97;">{{ t.colGrade }}</span>
+        </span>
+        <span style="align-self: end; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8d9b97;">ECTS</span>
+        <span></span>
+        <span></span>
+        <sc-for list="{{ rows }}" as="row" hint-placeholder-count="5">
+          <input type="text" value="{{ row.name }}" onChange="{{ row.onName }}" placeholder="{{ t.subjectPh }}" style="height: 46px; padding: 0 14px; font-size: 15px; color: #1f2933; background: #f5f8f7; border: 1px solid #e2e8e6; border-radius: 10px; width: 100%;" style-hover="border-color: #cbd6d3" />
+          <div>
+            <sc-if value="{{ useSelect }}" hint-placeholder-val="{{ true }}">
+          <select value="{{ row.grade }}" onChange="{{ row.onGrade }}" style="height: 46px; padding: 0 10px; font-size: 16px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; color: #1f2933; background: #f5f8f7; border: 1px solid #e2e8e6; border-radius: 10px; width: 100%; appearance: none; text-align: center;">
+            <option value="">—</option>
+            <option value="12">12</option>
+            <option value="10">10</option>
+            <option value="7">7</option>
+            <option value="4">4</option>
+            <option value="2">02</option>
+            <option value="0">00</option>
+            <option value="-3">-3</option>
+          </select>
+            </sc-if>
+            <sc-if value="{{ useFree }}" hint-placeholder-val="{{ false }}">
+              <input type="text" inputMode="decimal" value="{{ row.grade }}" onChange="{{ row.onGrade }}" placeholder="{{ t.gradePh }}" style="height: 46px; padding: 0 12px; font-size: 16px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; color: #1f2933; background: #f5f8f7; border: 1px solid #e2e8e6; border-radius: 10px; width: 100%; text-align: center;" />
+            </sc-if>
+          </div>
+          <input type="text" inputMode="decimal" value="{{ row.ects }}" onChange="{{ row.onEcts }}" placeholder="0" style="height: 46px; padding: 0 12px; font-size: 16px; font-family: 'IBM Plex Mono', monospace; color: #1f2933; background: #f5f8f7; border: 1px solid #e2e8e6; border-radius: 10px; width: 100%;" />
+          <button type="button" onClick="{{ row.onDuplicate }}" aria-label="{{ t.dup }}" title="{{ t.dup }}" style="height: 36px; width: 36px; display: flex; align-items: center; justify-content: center; border: 0; background: transparent; color: #b3bfbc; border-radius: 9px; cursor: pointer; padding: 0;" style-hover="background: #e4f4ef; color: #0f6555">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="5.6" y="5.6" width="8.6" height="8.6" rx="2"></rect><path d="M10.4 3.4a2 2 0 0 0-2-1.6H3.8a2 2 0 0 0-2 2v4.6a2 2 0 0 0 1.6 2"></path></svg>
+          </button>
+          <button type="button" onClick="{{ row.onRemove }}" aria-label="{{ t.remove }}" title="{{ t.remove }}" style="height: 36px; width: 36px; display: flex; align-items: center; justify-content: center; border: 0; background: transparent; color: #b3bfbc; border-radius: 9px; font-size: 20px; line-height: 1; cursor: pointer;" style-hover="background: #fdeeee; color: #d1544f">×</button>
+        </sc-for>
+      </div>
+
+      <div style="padding: 22px 34px 30px; display: flex; gap: 10px; flex-wrap: wrap;">
+        <button type="button" onClick="{{ addRow }}" style="height: 44px; padding: 0 20px; font-size: 15px; font-weight: 700; color: #0f6555; background: #e4f4ef; border: 1px solid #c6e6dd; border-radius: 10px; cursor: pointer;" style-hover="background: #d7ede6">{{ t.addOne }}</button>
+        <button type="button" onClick="{{ addFive }}" style="height: 44px; padding: 0 18px; font-size: 15px; font-weight: 700; color: #0f6555; background: transparent; border: 1px solid #c6e6dd; border-radius: 10px; cursor: pointer;" style-hover="background: #e4f4ef">{{ t.addFive }}</button>
+        <button type="button" onClick="{{ reset }}" style="height: 44px; padding: 0 18px; font-size: 15px; font-weight: 700; color: #7a8784; background: transparent; border: 1px solid #e2e8e6; border-radius: 10px; cursor: pointer;" style-hover="color: #1f2933; border-color: #cbd6d3">{{ t.reset }}</button>
+      </div>
+
+      <div style="background: #17876f; padding: 30px 34px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap;">
+        <div>
+          <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.62);">{{ t.resultLabel }}</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 68px; line-height: 1; font-weight: 600; color: #ffffff; letter-spacing: -0.03em; margin-top: 8px;">{{ average }}</div>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: stretch;">
+          <div style="background: rgba(255,255,255,0.12); border-radius: 12px; padding: 12px 18px; min-width: 96px;">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.6);">ECTS</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 600; color: #ffffff; margin-top: 2px;">{{ letter }}</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.12); border-radius: 12px; padding: 12px 18px; min-width: 96px;">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.6);">{{ t.totalLabel }}</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 600; color: #ffffff; margin-top: 2px;">{{ totalEcts }}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside style="display: grid; gap: 24px;">
+      <section style="background: #ffffff; border-radius: 18px; padding: 30px 32px; box-shadow: 0 1px 2px rgba(31,41,51,0.06), 0 18px 44px -30px rgba(31,41,51,0.3);">
+        <h2 style="margin: 0 0 16px; font-size: 21px; font-weight: 900; letter-spacing: -0.01em; color: #1f2933;">{{ t.howTitle }}</h2>
+        <div style="background: #f5f8f7; border-radius: 12px; padding: 18px 20px; font-family: 'IBM Plex Mono', monospace; font-size: 14px; line-height: 1.6; color: #2b3440;">
+          <div style="border-bottom: 1px solid #cbd6d3; padding-bottom: 6px; display: inline-block;">{{ t.formula }}</div>
+          <div style="padding-top: 6px;">Σ ECTS</div>
+        </div>
+        <p style="margin: 18px 0 0; font-size: 15px; line-height: 1.6; color: #5c6b68; text-wrap: pretty;">{{ t.note }}</p>
+        <p style="margin: 12px 0 0; font-size: 15px; line-height: 1.6; color: #5c6b68;">{{ t.feedback }} <a href="mailto:kontakt@chrintz.dk">kontakt@chrintz.dk</a></p>
+      </section>
+
+      <sc-if value="{{ showScale }}" hint-placeholder-val="{{ true }}">
+      <section style="background: #ffffff; border-radius: 18px; padding: 30px 32px 24px; box-shadow: 0 1px 2px rgba(31,41,51,0.06), 0 18px 44px -30px rgba(31,41,51,0.3);">
+        <h2 style="margin: 0 0 6px; font-size: 21px; font-weight: 900; letter-spacing: -0.01em; color: #1f2933;">{{ t.scaleTitle }}</h2>
+        <p style="margin: 0 0 18px; font-size: 15px; line-height: 1.6; color: #5c6b68;">{{ t.scaleLede }}</p>
+        <div style="display: grid; gap: 8px;">
+          <sc-for list="{{ scale }}" as="s" hint-placeholder-count="7">
+            <div style="display: grid; grid-template-columns: 44px 1fr 30px; gap: 14px; align-items: baseline; padding: 12px 14px; background: #f5f8f7; border-radius: 10px;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 600; color: #17876f;">{{ s.grade }}</span>
+              <span>
+                <span style="display: block; font-size: 15px; font-weight: 700; color: #1f2933;">{{ s.title }}</span>
+                <span style="display: block; font-size: 13.5px; line-height: 1.5; color: #6b7975; margin-top: 3px; text-wrap: pretty;">{{ s.desc }}</span>
+              </span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; color: #8d9b97; text-align: right;">{{ s.ects }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+      </sc-if>
+    </aside>
+  </main>
+
+  <footer style="padding: 0 32px 48px; text-align: center; font-size: 13px; color: #8d9b97;">{{ t.footer }}</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;rowCount&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:5,&quot;min&quot;:1,&quot;max&quot;:12,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Beregner&quot;},&quot;showScale&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Indhold&quot;},&quot;lang&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;da&quot;,&quot;en&quot;],&quot;default&quot;:&quot;da&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Indhold&quot;}}">
+const SCALE = {
+  da: [
+    { grade: "12", ects: "A", title: "Den fremragende præstation", desc: "Udtømmende opfyldelse af fagets mål, med ingen eller få uvæsentlige mangler." },
+    { grade: "10", ects: "B", title: "Den fortrinlige præstation", desc: "Omfattende opfyldelse af fagets mål, med nogle mindre væsentlige mangler." },
+    { grade: "7", ects: "C", title: "Den gode præstation", desc: "Opfyldelse af fagets mål, med en del mangler." },
+    { grade: "4", ects: "D", title: "Den jævne præstation", desc: "En mindre grad af opfyldelse af fagets mål, med adskillige væsentlige mangler." },
+    { grade: "02", ects: "E", title: "Den tilstrækkelige præstation", desc: "Den minimalt acceptable grad af opfyldelse af fagets mål." },
+    { grade: "00", ects: "Fx", title: "Den utilstrækkelige præstation", desc: "Ingen acceptabel grad af opfyldelse af fagets mål." },
+    { grade: "-3", ects: "F", title: "Den ringe præstation", desc: "Den helt uacceptable præstation." }
+  ],
+  en: [
+    { grade: "12", ects: "A", title: "Excellent performance", desc: "Displays a high level of command of all aspects of the relevant material, with no or only a few minor weaknesses." },
+    { grade: "10", ects: "B", title: "Very good performance", desc: "Displays a high level of command of most aspects of the relevant material, with a few minor weaknesses." },
+    { grade: "7", ects: "C", title: "Good performance", desc: "Displays command of the relevant material but also some weaknesses." },
+    { grade: "4", ects: "D", title: "Fair performance", desc: "Displays a less than adequate command of the relevant material, with several substantial weaknesses." },
+    { grade: "02", ects: "E", title: "Adequate performance", desc: "Meets the minimum requirements for acceptance." },
+    { grade: "00", ects: "Fx", title: "Inadequate performance", desc: "Does not meet the minimum requirements for acceptance." },
+    { grade: "-3", ects: "F", title: "Unacceptable performance", desc: "Is unacceptable in every respect." }
+  ]
+};
+
+const COPY = {
+  da: {
+    tagline: "Vægtet karaktergennemsnit",
+    title: "Beregn dit vægtede gennemsnit",
+    lede: "Tilføj dine karakterer og de tilhørende ECTS-point. Gennemsnittet opdateres automatisk, mens du skriver.",
+    colSubject: "Fag (valgfrit)", colGrade: "Karakter", subjectPh: "fx Statistik", gradePh: "fx 7",
+    toList: "Vælg fra liste", toFree: "Fri indtastning",
+    dup: "Dublér fag", remove: "Fjern fag",
+    addOne: "+ Tilføj fag", addFive: "+ 5 fag", reset: "Nulstil",
+    resultLabel: "Dit vægtede gennemsnit", totalLabel: "Point i alt",
+    howTitle: "Sådan beregnes dit gennemsnit",
+    formula: "Σ (ECTS × karakter)",
+    note: "Beregner dit uddannelsessted anderledes, kan du sandsynligvis ikke bruge sidens resultat.",
+    feedback: "Rettelser eller feedback:",
+    scaleTitle: "Karakterskalaen",
+    scaleLede: "Gennemsnittet omregnes automatisk til den europæiske ECTS-skala.",
+    footer: "Snittet.dk · gennemsnit for danske universitetsstuderende"
+  },
+  en: {
+    tagline: "Weighted grade average",
+    title: "Calculate your weighted average",
+    lede: "Add your grades and their ECTS credits. The average updates automatically as you type.",
+    colSubject: "Course (optional)", colGrade: "Grade", subjectPh: "e.g. Statistics", gradePh: "e.g. 7",
+    toList: "Pick from list", toFree: "Type freely",
+    dup: "Duplicate course", remove: "Remove course",
+    addOne: "+ Add course", addFive: "+ 5 courses", reset: "Reset",
+    resultLabel: "Your weighted average", totalLabel: "Total credits",
+    howTitle: "How the average is calculated",
+    formula: "Σ (ECTS × grade)",
+    note: "If your institution calculates it differently, the result on this page may not apply to you.",
+    feedback: "Corrections or feedback:",
+    scaleTitle: "The Danish grading scale",
+    scaleLede: "Your average is automatically converted to the European ECTS scale.",
+    footer: "Snittet.dk · grade averages for students in Denmark"
+  }
+};
+
+const LANG_BTN = "height: 26px; padding: 0 11px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; border: 0; border-radius: 6px; cursor: pointer;";
+
+class Component extends DCLogic {
+  state = { rows: this.makeRows(), lang: this.props.lang === "en" ? "en" : "da", freeGrades: false };
+
+  makeRows() {
+    const n = Math.max(1, this.props.rowCount ?? 5);
+    return Array.from({ length: n }, () => ({ name: "", grade: "", ects: "" }));
+  }
+
+  update(i, key, value) {
+    this.setState(s => {
+      const rows = s.rows.map((r, j) => (j === i ? Object.assign({}, r, { [key]: value }) : r));
+      return { rows };
+    });
+  }
+
+  letterFor(avg) {
+    if (avg === null) return "—";
+    if (avg >= 11) return "A";
+    if (avg >= 8.5) return "B";
+    if (avg >= 5.5) return "C";
+    if (avg >= 3) return "D";
+    if (avg >= 1) return "E";
+    if (avg >= -1) return "Fx";
+    return "F";
+  }
+
+  renderVals() {
+    const lang = this.state.lang;
+    const t = COPY[lang];
+    const free = this.state.freeGrades;
+    const rows = this.state.rows;
+    let num = 0, den = 0;
+    rows.forEach(r => {
+      const g = parseFloat(String(r.grade).replace(",", ".")), e = parseFloat(String(r.ects).replace(",", "."));
+      if (!isNaN(g) && !isNaN(e) && e > 0) { num += g * e; den += e; }
+    });
+    const avg = den > 0 ? num / den : null;
+    return {
+      rows: rows.map((r, i) => ({
+        name: r.name,
+        grade: r.grade,
+        ects: r.ects,
+        onName: e => this.update(i, "name", e.target.value),
+        onGrade: e => this.update(i, "grade", e.target.value),
+        onEcts: e => this.update(i, "ects", e.target.value),
+        onRemove: () => this.setState(s => ({ rows: s.rows.length > 1 ? s.rows.filter((_, j) => j !== i) : s.rows })),
+        onDuplicate: () => this.setState(s => {
+          const rows = s.rows.slice();
+          rows.splice(i + 1, 0, Object.assign({}, s.rows[i]));
+          return { rows };
+        })
+      })),
+      average: avg === null ? "—" : (lang === "da" ? avg.toFixed(2).replace(".", ",") : avg.toFixed(2)),
+      letter: this.letterFor(avg),
+      totalEcts: den > 0 ? String(den % 1 === 0 ? den : den.toFixed(1)) : "—",
+      addRow: () => this.setState(s => ({ rows: s.rows.concat([{ name: "", grade: "", ects: "" }]) })),
+      addFive: () => this.setState(s => ({ rows: s.rows.concat(Array.from({ length: 5 }, () => ({ name: "", grade: "", ects: "" }))) })),
+      reset: () => this.setState({ rows: this.makeRows() }),
+      scale: SCALE[lang],
+      showScale: this.props.showScale ?? true,
+      t: Object.assign({}, t, { gradeToggle: free ? t.toList : t.toFree }),
+      useSelect: !free,
+      useFree: free,
+      toggleGradeMode: () => this.setState(s => ({ freeGrades: !s.freeGrades })),
+      setDa: () => this.setState({ lang: "da" }),
+      setEn: () => this.setState({ lang: "en" }),
+      daStyle: LANG_BTN + (lang === "da" ? "background: #ffffff; color: #1f2933;" : "background: transparent; color: rgba(255,255,255,0.6);"),
+      enStyle: LANG_BTN + (lang === "en" ? "background: #ffffff; color: #1f2933;" : "background: transparent; color: rgba(255,255,255,0.6);")
+    };
+  }
+}
+</script>
+</body>
+</html>
