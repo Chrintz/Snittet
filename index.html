@@ -84,10 +84,14 @@
         </sc-for>
       </div>
 
-      <div style="padding: 22px 34px 30px; display: flex; gap: 10px; flex-wrap: wrap;">
+      <div style="padding: 22px 34px 30px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
         <button type="button" onClick="{{ addRow }}" style="height: 44px; padding: 0 20px; font-size: 15px; font-weight: 700; color: #0f6555; background: #e4f4ef; border: 1px solid #c6e6dd; border-radius: 10px; cursor: pointer;" style-hover="background: #d7ede6">{{ t.addOne }}</button>
         <button type="button" onClick="{{ addFive }}" style="height: 44px; padding: 0 18px; font-size: 15px; font-weight: 700; color: #0f6555; background: transparent; border: 1px solid #c6e6dd; border-radius: 10px; cursor: pointer;" style-hover="background: #e4f4ef">{{ t.addFive }}</button>
         <button type="button" onClick="{{ reset }}" style="height: 44px; padding: 0 18px; font-size: 15px; font-weight: 700; color: #7a8784; background: transparent; border: 1px solid #e2e8e6; border-radius: 10px; cursor: pointer;" style-hover="color: #1f2933; border-color: #cbd6d3">{{ t.reset }}</button>
+        <div style="margin-left: auto; display: flex; gap: 10px; flex-wrap: wrap;">
+          <button type="button" onClick="{{ saveNow }}" style="{{ saveStyle }}" style-hover="background: #e4f4ef">{{ saveLabel }}</button>
+          <button type="button" onClick="{{ shareLink }}" style="{{ linkStyle }}" style-hover="background: #e4f4ef">{{ linkLabel }}</button>
+        </div>
       </div>
 
       <div style="background: #17876f; padding: 30px 34px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap;">
@@ -174,6 +178,8 @@ const COPY = {
     toList: "Vælg fra liste", toFree: "Fri indtastning",
     dup: "Dublér fag", remove: "Fjern fag",
     addOne: "+ Tilføj fag", addFive: "+ 5 fag", reset: "Nulstil",
+    save: "Gem", saved: "Gemt ✓", saveFailed: "Kunne ikke gemme",
+    shareLink: "Kopiér link", copied: "Link kopieret ✓", copyFailed: "Kopiering mislykkedes",
     resultLabel: "Dit vægtede gennemsnit", totalLabel: "Point i alt",
     howTitle: "Sådan beregnes dit gennemsnit",
     formula: "Σ (ECTS × karakter)",
@@ -191,6 +197,8 @@ const COPY = {
     toList: "Pick from list", toFree: "Type freely",
     dup: "Duplicate course", remove: "Remove course",
     addOne: "+ Add course", addFive: "+ 5 courses", reset: "Reset",
+    save: "Save", saved: "Saved ✓", saveFailed: "Could not save",
+    shareLink: "Copy link", copied: "Link copied ✓", copyFailed: "Copy failed",
     resultLabel: "Your weighted average", totalLabel: "Total credits",
     howTitle: "How the average is calculated",
     formula: "Σ (ECTS × grade)",
@@ -204,12 +212,137 @@ const COPY = {
 
 const LANG_BTN = "height: 26px; padding: 0 11px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; border: 0; border-radius: 6px; cursor: pointer;";
 
+const TOOL_BTN = "height: 44px; padding: 0 18px; font-size: 15px; font-weight: 700; border-radius: 10px; cursor: pointer; white-space: nowrap;";
+const TOOL_STATE = {
+  idle: "color: #0f6555; background: transparent; border: 1px solid #c6e6dd;",
+  ok: "color: #ffffff; background: #17876f; border: 1px solid #17876f;",
+  bad: "color: #d1544f; background: #fdeeee; border: 1px solid #f3d3d2;"
+};
+
+const STORE_KEY = "snittet:v1";
+const URL_PARAM = "d";
+
+/** URL-safe base64 so Danish course names survive the round trip. */
+function b64encode(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  bytes.forEach(b => { bin += String.fromCharCode(b); });
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function b64decode(s) {
+  const bin = atob(s.replace(/-/g, "+").replace(/_/g, "/"));
+  return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
+}
+
+/** Clipboard API where available, hidden-textarea fallback otherwise. */
+function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text).then(() => true, () => legacyCopy(text));
+  }
+  return Promise.resolve(legacyCopy(text));
+}
+
+function legacyCopy(text) {
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.cssText = "position:fixed;top:0;left:-9999px;opacity:0;";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch (e) { return false; }
+}
+
 class Component extends DCLogic {
-  state = { rows: this.makeRows(), lang: this.props.lang === "en" ? "en" : "da", freeGrades: false };
+  state = this.initialState();
 
   makeRows() {
     const n = Math.max(1, this.props.rowCount ?? 5);
     return Array.from({ length: n }, () => ({ name: "", grade: "", ects: "" }));
+  }
+
+  /** A shared link wins over locally saved data, so an opened link shows
+   *  what the sender meant to share. */
+  initialState() {
+    const saved = this.readUrl() || this.readStore();
+    return {
+      rows: saved ? saved.rows : this.makeRows(),
+      lang: this.props.lang === "en" ? "en" : "da",
+      freeGrades: saved ? saved.freeGrades : false,
+      flash: ""
+    };
+  }
+
+  /** Compact shape shared by localStorage and the URL: rows as tuples. */
+  payload() {
+    return {
+      v: 1,
+      m: this.state.freeGrades ? "free" : "list",
+      r: this.state.rows.map(r => [r.name, r.grade, r.ects])
+    };
+  }
+
+  /** Anything read back is untrusted — a hand-edited link must not break
+   *  the page, so clamp both the row count and every field length. */
+  parsePayload(data) {
+    if (!data || !Array.isArray(data.r) || !data.r.length) return null;
+    const rows = data.r.slice(0, 100).map(r => ({
+      name: String((r && r[0]) ?? "").slice(0, 120),
+      grade: String((r && r[1]) ?? "").slice(0, 8),
+      ects: String((r && r[2]) ?? "").slice(0, 8)
+    }));
+    return { rows, freeGrades: data.m === "free" };
+  }
+
+  readStore() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      return raw ? this.parsePayload(JSON.parse(raw)) : null;
+    } catch (e) { return null; }
+  }
+
+  readUrl() {
+    try {
+      const d = new URLSearchParams(location.search).get(URL_PARAM);
+      return d ? this.parsePayload(JSON.parse(b64decode(d))) : null;
+    } catch (e) { return null; }
+  }
+
+  saveLocal() {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(this.payload()));
+      this.flash("saved");
+    } catch (e) {
+      this.flash("saveError");
+    }
+  }
+
+  copyLink() {
+    const url = location.origin + location.pathname + "?" + URL_PARAM + "=" + b64encode(JSON.stringify(this.payload()));
+    copyText(url).then(ok => {
+      // Mirror the link into the address bar so a failed copy is still recoverable.
+      if (ok) { try { history.replaceState(null, "", url); } catch (e) {} }
+      this.flash(ok ? "copied" : "copyError");
+    });
+  }
+
+  clearSaved() {
+    try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+    try { if (location.search) history.replaceState(null, "", location.pathname); } catch (e) {}
+  }
+
+  flash(kind) {
+    clearTimeout(this.__flashTimer);
+    this.setState({ flash: kind });
+    this.__flashTimer = setTimeout(() => this.setState({ flash: "" }), 2400);
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this.__flashTimer);
   }
 
   update(i, key, value) {
@@ -235,6 +368,7 @@ class Component extends DCLogic {
     const t = COPY[lang];
     const free = this.state.freeGrades;
     const rows = this.state.rows;
+    const flash = this.state.flash;
     let num = 0, den = 0;
     rows.forEach(r => {
       const g = parseFloat(String(r.grade).replace(",", ".")), e = parseFloat(String(r.ects).replace(",", "."));
@@ -261,7 +395,13 @@ class Component extends DCLogic {
       totalEcts: den > 0 ? String(den % 1 === 0 ? den : den.toFixed(1)) : "—",
       addRow: () => this.setState(s => ({ rows: s.rows.concat([{ name: "", grade: "", ects: "" }]) })),
       addFive: () => this.setState(s => ({ rows: s.rows.concat(Array.from({ length: 5 }, () => ({ name: "", grade: "", ects: "" }))) })),
-      reset: () => this.setState({ rows: this.makeRows() }),
+      reset: () => { this.clearSaved(); this.setState({ rows: this.makeRows(), flash: "" }); },
+      saveNow: () => this.saveLocal(),
+      shareLink: () => this.copyLink(),
+      saveLabel: flash === "saved" ? t.saved : flash === "saveError" ? t.saveFailed : t.save,
+      linkLabel: flash === "copied" ? t.copied : flash === "copyError" ? t.copyFailed : t.shareLink,
+      saveStyle: TOOL_BTN + TOOL_STATE[flash === "saved" ? "ok" : flash === "saveError" ? "bad" : "idle"],
+      linkStyle: TOOL_BTN + TOOL_STATE[flash === "copied" ? "ok" : flash === "copyError" ? "bad" : "idle"],
       scale: SCALE[lang],
       showScale: this.props.showScale ?? true,
       t: Object.assign({}, t, { gradeToggle: free ? t.toList : t.toFree }),
