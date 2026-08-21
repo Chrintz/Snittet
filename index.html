@@ -330,8 +330,10 @@ class Component extends DCLogic {
     });
   }
 
-  clearSaved() {
-    try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+  /** Drop the ?d= param so the address bar stops describing rows that are
+   *  gone. The saved copy is deliberately left alone — only Save writes it,
+   *  so resetting and then saving is what stores a clean sheet. */
+  clearUrl() {
     try { if (location.search) history.replaceState(null, "", location.pathname); } catch (e) {}
   }
 
@@ -395,7 +397,7 @@ class Component extends DCLogic {
       totalEcts: den > 0 ? String(den % 1 === 0 ? den : den.toFixed(1)) : "—",
       addRow: () => this.setState(s => ({ rows: s.rows.concat([{ name: "", grade: "", ects: "" }]) })),
       addFive: () => this.setState(s => ({ rows: s.rows.concat(Array.from({ length: 5 }, () => ({ name: "", grade: "", ects: "" }))) })),
-      reset: () => { this.clearSaved(); this.setState({ rows: this.makeRows(), flash: "" }); },
+      reset: () => { this.clearUrl(); this.setState({ rows: this.makeRows(), flash: "" }); },
       saveNow: () => this.saveLocal(),
       shareLink: () => this.copyLink(),
       saveLabel: flash === "saved" ? t.saved : flash === "saveError" ? t.saveFailed : t.save,
